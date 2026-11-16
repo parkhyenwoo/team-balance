@@ -110,7 +110,8 @@
     </div>
     <div id="result"></div>
     <div class="row" style="margin-top:14px">
-      <button class="btn pri" id="shot" style="flex:1;padding:14px">사진으로 저장</button>
+      <button class="btn pri" id="shot" style="flex:2;padding:14px">카카오톡 등으로 공유</button>
+      <button class="btn" id="prev" style="flex:1;padding:14px">이미지 보기</button>
     </div>
     <div class="hint" id="sizeNote"></div>
   </div>
@@ -126,7 +127,7 @@
   <img id="shotImg" alt="팀 배정 이미지">
   <p>이미지를 길게 눌러 저장할 수도 있습니다</p>
   <div class="row">
-    <button class="btn pri" id="shareBtn">갤러리/공유로 저장</button>
+    <button class="btn pri" id="shareBtn">공유하기</button>
     <button class="btn" id="dlBtn">파일로 받기</button>
     <button class="btn" id="closeBtn">닫기</button>
   </div>
@@ -265,6 +266,7 @@ function go(){
     <ul>${t.map(n=>`<li>${esc(n)}</li>`).join('')}</ul></div>`}).join('')}</div>`;
   const sizes=[...new Set(current.map(t=>t.length))];
   $('sizeNote').textContent=sizes.length>1?'인원이 많은 팀은 경기 중 서로 교체하며 뛰면 됩니다.':'';
+  prepareImage();
   $('resCard').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
@@ -309,16 +311,22 @@ async function makeImage(){
   x.fillText('인원이 많은 팀은 서로 교체하며 뛰어요',W/2,H-30);
   return await new Promise(res=>cv.toBlob(res,'image/png'));
 }
-async function shot(){
-  if(!current)return;
-  $('shot').textContent='이미지 만드는 중…';
-  try{
-    imgBlob=await makeImage();
-    if(imgUrl)URL.revokeObjectURL(imgUrl);
-    imgUrl=URL.createObjectURL(imgBlob);
-    $('shotImg').src=imgUrl;$('modal').classList.add('show');
-  }finally{$('shot').textContent='사진으로 저장'}
+let imgPromise=null;
+function prepareImage(){      // 팀을 짠 직후 미리 만들어 둠 → 공유 버튼이 바로 반응
+  imgBlob=null;
+  imgPromise=makeImage().then(b=>{imgBlob=b;if(imgUrl)URL.revokeObjectURL(imgUrl);imgUrl=URL.createObjectURL(b);return b});
 }
+function showPreview(){$('shotImg').src=imgUrl;$('modal').classList.add('show')}
+async function shot(){        // 카카오톡 등으로 바로 공유
+  if(!current)return;
+  const blob=imgBlob||await imgPromise;
+  const f=new File([blob],fileName(),{type:'image/png'});
+  if(navigator.canShare&&navigator.canShare({files:[f]})){
+    try{await navigator.share({files:[f]});return}catch(e){if(e.name==='AbortError')return}
+  }
+  showPreview();               // 공유 미지원(PC 등) → 미리보기에서 저장
+}
+async function preview(){if(current){await (imgBlob||imgPromise);showPreview()}}
 function fileName(){const d=new Date();return `팀배정_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.png`}
 $('shareBtn').onclick=async()=>{
   const f=new File([imgBlob],fileName(),{type:'image/png'});
@@ -356,6 +364,7 @@ $('gadd').onclick=()=>{
 $('teamsSel').onchange=()=>{$('teamsSel').dataset.manual='1';updateBar()};
 $('go').onclick=go;
 $('shot').onclick=shot;
+$('prev').onclick=preview;
 $('copy').onclick=async()=>{
   if(!current)return;
   const t=current.map((m,i)=>`[${TEAMS[i].n}팀] ${m.join(', ')}`).join('\n');
