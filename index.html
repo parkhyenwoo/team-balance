@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>풋살 팀 밸런서</title>
+<style>
+  :root{--bg:#f4f6f8;--card:#fff;--text:#1d2733;--sub:#667085;--line:#e3e8ee;--pri:#1f7a4d;--priBg:#e3f4ea}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#12161b;--card:#1c222a;--text:#e8edf2;--sub:#97a3b0;--line:#2c3540;--pri:#3cb27a;--priBg:#1c3a2c}}
+  :root[data-theme="dark"]{color-scheme:dark;--bg:#12161b;--card:#1c222a;--text:#e8edf2;--sub:#97a3b0;--line:#2c3540;--pri:#3cb27a;--priBg:#1c3a2c}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Malgun Gothic",system-ui,sans-serif}
+  .wrap{max-width:980px;margin:0 auto;padding:16px}
+  h1{font-size:22px;margin:4px 0 14px}
+  h2{font-size:16px;margin:0 0 10px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+  @media (max-width:760px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  input[type=text],input[type=number],select{padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font-size:15px}
+  input[type=text]{flex:1;min-width:100px}
+  button{padding:9px 14px;border:0;border-radius:8px;background:var(--pri);color:#fff;font-size:15px;cursor:pointer}
+  button.ghost{background:transparent;color:var(--sub);border:1px solid var(--line)}
+  button.big{width:100%;padding:13px;font-size:17px;margin-top:10px}
+  .members{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px;margin-top:10px}
+  .chip{padding:11px 6px;border:2px solid var(--line);border-radius:10px;background:var(--bg);text-align:center;font-size:15px;cursor:pointer;user-select:none;position:relative}
+  .chip.on{border-color:var(--pri);background:var(--priBg);font-weight:700}
+  .chip small{display:block;color:var(--sub);font-weight:400;font-size:12px}
+  .edit{display:flex;align-items:center;gap:8px;padding:6px 2px;border-bottom:1px solid var(--line)}
+  .edit .n{flex:1}
+  .edit input[type=number]{width:76px}
+  .x{padding:3px 9px;background:transparent;color:var(--sub);border:1px solid var(--line)}
+  .sum{color:var(--sub);font-size:14px;margin:6px 0}
+  .teams{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:10px}
+  .team{border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--bg)}
+  .team h3{margin:0 0 6px;font-size:15px;display:flex;justify-content:space-between}
+  .team .m{display:flex;justify-content:space-between;padding:3px 0}
+  .bench{margin-top:10px;font-size:14px}
+  .hint{color:var(--sub);font-size:13px;margin-top:6px}
+  label.chk{display:flex;gap:6px;align-items:center;font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>⚽ 풋살 팀 밸런서</h1>
+  <div class="grid">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">오늘 참석자 <span id="cnt" class="hint"></span></h2>
+        <button class="ghost" id="editBtn">점수 편집</button>
+      </div>
+
+      <div id="viewMode">
+        <div class="row" style="margin-top:10px">
+          <button class="ghost" id="allOn">전체 선택</button>
+          <button class="ghost" id="allOff">전체 해제</button>
+        </div>
+        <div class="members" id="members"></div>
+        <div class="hint">이름을 누르면 참석 체크/해제됩니다.</div>
+      </div>
+
+      <div id="editMode" style="display:none;margin-top:10px">
+        <div id="editList"></div>
+        <div class="row" style="margin-top:10px">
+          <input type="text" id="nm" placeholder="새 회원 이름" maxlength="12">
+          <input type="number" id="sc" value="70" min="0" max="100" style="width:76px">
+          <button id="add">추가</button>
+        </div>
+        <div class="hint">점수는 자동 저장됩니다. (기본값 70 = 아직 미입력)</div>
+        <button class="ghost" id="reset" style="margin-top:10px">전체 점수 70으로 초기화</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>팀 짜기</h2>
+      <div id="info" class="sum"></div>
+      <div class="row">
+        <label>팀 수 <select id="teamsSel"></select></label>
+        <label class="chk"><input type="checkbox" id="showScore"> 결과에 점수 표시</label>
+      </div>
+      <div class="hint">팀당 최소 5명 기준으로 팀 수를 자동 계산하고, 남는 인원은 대기로 뺍니다.</div>
+      <button class="big" id="go">팀 짜기 / 다시 섞기</button>
+      <div id="result"></div>
+      <button class="ghost big" id="copy" style="display:none">결과 복사 (카톡용)</button>
+      <textarea id="fallback" style="display:none;width:100%;min-height:90px;margin-top:8px" readonly></textarea>
+    </div>
+  </div>
+</div>
+
+<script>
+const DEFAULT_NAMES=['윤성필','김권태','최종석','박현우','최승민','뽕규태','김병규','강기웅','전제영','강관태','윤대섭','김찬호','조재승','김진무','조우균','서국석','백인권','최혁순','이제연','김성래','김보균','김임배','손동현','이상현'];
+const DEFAULT_SCORE=70, MIN=5, KEY='futsal_v2';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+let members=DEFAULT_NAMES.map(n=>({name:n,score:DEFAULT_SCORE}));
+try{
+  const s=JSON.parse(localStorage.getItem(KEY)||'null');
+  if(Array.isArray(s)&&s.length)members=s.map(m=>({name:String(m.name),score:+m.score||DEFAULT_SCORE}));
+}catch(e){}
+const present=new Set();           // 오늘 참석 (저장 안 함: 매번 새로 체크)
+let editing=false, lastText='';
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(members))}catch(e){}};
+
+function render(){
+  $('viewMode').style.display=editing?'none':'';
+  $('editMode').style.display=editing?'':'none';
+  $('editBtn').textContent=editing?'완료':'점수 편집';
+  $('cnt').textContent=`(${present.size} / ${members.length}명)`;
+  if(editing){
+    $('editList').innerHTML=members.map((m,i)=>`<div class="edit"><span class="n">${esc(m.name)}</span>
+      <input type="number" min="0" max="100" value="${m.score}" data-sc="${i}">
+      <button class="x" data-del="${i}">✕</button></div>`).join('');
+  }else{
+    $('members').innerHTML=members.map((m,i)=>`<div class="chip ${present.has(m.name)?'on':''}" data-i="${i}">${esc(m.name)}</div>`).join('');
+  }
+  updateInfo();
+}
+
+function updateInfo(){
+  const n=present.size, mt=Math.floor(n/MIN), sel=$('teamsSel'), prev=+sel.value;
+  sel.innerHTML=mt<2?'<option value="0">-</option>':Array.from({length:mt-1},(_,k)=>k+2).map(k=>`<option value="${k}">${k}팀</option>`).join('');
+  if(mt>=2)sel.value=(sel.dataset.manual==='1'&&prev>=2&&prev<=mt)?prev:mt;
+  const k=+sel.value;
+  if(mt<2){$('info').textContent=`참석 ${n}명 — 최소 ${MIN*2}명 필요`;return}
+  const size=Math.floor(n/k), left=n-size*k;
+  $('info').textContent=`참석 ${n}명 → ${k}팀 × ${size}명`+(left?` + 대기 ${left}명`:'');
+}
+
+/* ---------- 밸런스 알고리즘 ---------- */
+const sumOf=t=>t.reduce((a,p)=>a+p.score,0);
+const variance=a=>{const m=a.reduce((x,y)=>x+y,0)/a.length;return a.reduce((x,v)=>x+(v-m)**2,0)/a.length};
+
+function makeCost(all,k){
+  // 상/중/하 3등분 그룹을 정해 팀마다 골고루 분산되도록 함
+  const sorted=all.slice().sort((a,b)=>b.score-a.score);
+  const grp=new Map();
+  sorted.forEach((p,i)=>grp.set(p.name,Math.min(2,Math.floor(i*3/sorted.length))));
+  return teams=>{
+    let c=variance(teams.map(sumOf))*10;                 // 총점 균형 (가장 중요)
+    c+=variance(teams.map(t=>Math.max(...t.map(p=>p.score))))*1;   // 에이스 균형
+    c+=variance(teams.map(t=>Math.min(...t.map(p=>p.score))))*1;   // 약한 선수 균형
+    for(let g=0;g<3;g++)c+=variance(teams.map(t=>t.filter(p=>grp.get(p.name)===g).length))*60; // 상/중/하 분포
+    return c;
+  };
+}
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+
+function balance(att,k){
+  const size=Math.floor(att.length/k), cost=makeCost(att,k);
+  let best=null,bestC=Infinity;
+  for(let r=0;r<40;r++){
+    const pool=shuffle(att), bench=pool.slice(size*k);
+    const play=pool.slice(0,size*k).sort((a,b)=>b.score-a.score);
+    const teams=Array.from({length:k},()=>[]);
+    play.forEach((p,i)=>{const row=i/k|0,c=i%k;teams[row%2?k-1-c:c].push(p)});
+    let cur=cost(teams),improved=true,guard=0;
+    while(improved&&guard++<60){
+      improved=false;
+      for(let a=0;a<k;a++)for(let b=a+1;b<k;b++)for(let i=0;i<size;i++)for(let j=0;j<size;j++){
+        if(teams[a][i].score===teams[b][j].score)continue;
+        [teams[a][i],teams[b][j]]=[teams[b][j],teams[a][i]];
+        const c=cost(teams);
+        if(c<cur-1e-9){cur=c;improved=true}else{[teams[a][i],teams[b][j]]=[teams[b][j],teams[a][i]]}
+      }
+    }
+    if(cur<bestC-1e-9||(Math.abs(cur-bestC)<1e-9&&Math.random()<.5)){bestC=cur;best={teams:teams.map(t=>t.slice()),bench}}
+  }
+  return best;
+}
+
+/* ---------- 결과 ---------- */
+const TNAME=['A팀','B팀','C팀','D팀','E팀','F팀'];
+function go(){
+  const att=members.filter(m=>present.has(m.name)), k=+$('teamsSel').value;
+  if(att.length<MIN*2||k<2){$('result').innerHTML='<div class="hint">참석자가 10명 이상이어야 합니다.</div>';$('copy').style.display='none';return}
+  const {teams,bench}=balance(att,k), show=$('showScore').checked;
+  const ord=t=>t.slice().sort((a,b)=>b.score-a.score);
+  $('result').innerHTML=`<div class="teams">${teams.map((t,i)=>`
+    <div class="team"><h3><span>${TNAME[i]} (${t.length}명)</span>${show?`<span class="hint">합 ${sumOf(t)} · 평균 ${(sumOf(t)/t.length).toFixed(1)}</span>`:''}</h3>
+    ${ord(t).map(p=>`<div class="m"><span>${esc(p.name)}</span>${show?`<span class="hint">${p.score}</span>`:''}</div>`).join('')}</div>`).join('')}</div>`+
+    (bench.length?`<div class="bench"><b>대기</b> : ${bench.map(p=>esc(p.name)+(show?`(${p.score})`:'')).join(', ')}</div>`:'');
+  lastText=teams.map((t,i)=>`[${TNAME[i]}] `+ord(t).map(p=>p.name+(show?`(${p.score})`:'')).join(', ')).join('\n')+(bench.length?`\n[대기] `+bench.map(p=>p.name).join(', '):'');
+  $('copy').style.display='block';
+}
+
+/* ---------- 이벤트 ---------- */
+$('members').addEventListener('click',e=>{
+  const c=e.target.closest('.chip'); if(!c)return;
+  const n=members[+c.dataset.i].name;
+  present.has(n)?present.delete(n):present.add(n);
+  render();
+});
+$('allOn').onclick=()=>{members.forEach(m=>present.add(m.name));render()};
+$('allOff').onclick=()=>{present.clear();render()};
+$('editBtn').onclick=()=>{editing=!editing;render()};
+$('editList').addEventListener('change',e=>{
+  const i=e.target.dataset.sc; if(i===undefined)return;
+  members[i].score=Math.max(0,Math.min(100,+e.target.value||DEFAULT_SCORE)); e.target.value=members[i].score; save();
+});
+$('editList').addEventListener('click',e=>{
+  const b=e.target.closest('[data-del]'); if(!b)return;
+  if(b.dataset.arm!=='1'){b.dataset.arm='1';b.textContent='삭제?';setTimeout(()=>{b.dataset.arm='';b.textContent='✕'},2500);return}
+  const i=+b.dataset.del;present.delete(members[i].name);members.splice(i,1);save();render();
+});
+$('add').onclick=()=>{
+  const name=$('nm').value.trim(); if(!name||members.some(m=>m.name===name))return;
+  members.push({name,score:Math.max(0,Math.min(100,+$('sc').value||DEFAULT_SCORE))});
+  $('nm').value='';save();render();$('nm').focus();
+};
+$('nm').addEventListener('keydown',e=>{if(e.key==='Enter')$('add').click()});
+$('reset').onclick=()=>{const b=$('reset');
+  if(b.dataset.arm!=='1'){b.dataset.arm='1';b.textContent='한 번 더 누르면 전체 70으로 초기화';setTimeout(()=>{b.dataset.arm='';b.textContent='전체 점수 70으로 초기화'},3000);return}
+  b.dataset.arm='';b.textContent='전체 점수 70으로 초기화';members.forEach(m=>m.score=DEFAULT_SCORE);save();render()};
+$('teamsSel').onchange=()=>{$('teamsSel').dataset.manual='1';updateInfo()};
+$('go').onclick=go;
+$('copy').onclick=async()=>{try{await navigator.clipboard.writeText(lastText);$('copy').textContent='복사됨 ✓'}catch(e){$('fallback').style.display='block';$('fallback').value=lastText;$('fallback').select()}setTimeout(()=>$('copy').textContent='결과 복사 (카톡용)',1500)};
+render();
+</script>
+</body>
+</html>
