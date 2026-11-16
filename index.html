@@ -262,16 +262,25 @@ function go(){
   const att=members().filter(m=>present.has(m.name)), k=+$('teamsSel').value;
   if(att.length<MIN*2||k<2)return;
   current=balance(att,k);
+  saveResult();
+  showResult(true);
+}
+function showResult(scroll){
   $('resCard').style.display='';
   $('result').innerHTML=`<div class="teams">${current.map((t,i)=>{const s=TEAMS[i];return `
     <div class="team"><h3 style="background:${s.c};color:${s.t}${s.line?';border-bottom:2px solid '+s.line:''}">${s.n}팀<span>${t.length}명</span></h3>
     <ul>${t.map(n=>`<li>${esc(n)}</li>`).join('')}</ul></div>`}).join('')}</div>`;
-  const unset=att.filter(m=>!data.stats[m.name]).length;
+  const unset=current.flat().filter(n=>!data.stats[n]).length;
   const sizes=[...new Set(current.map(t=>t.length))];
   $('sizeNote').textContent=(sizes.length>1?'인원이 많은 팀은 경기 중 서로 교체하며 뛰면 됩니다. ':'')+(unset?`능력치 미입력 ${unset}명은 모두 '중'으로 계산했습니다.`:'');
   prepareImage();
-  $('resCard').scrollIntoView({behavior:'smooth',block:'start'});
+  if(scroll)$('resCard').scrollIntoView({behavior:'smooth',block:'start'});
 }
+/* 짜 놓은 팀은 이번 주 동안 저장 → 다시 열어도 그대로 (섞이지 않음) */
+const RKEY='futsal_result';
+const saveResult=()=>{try{localStorage.setItem(RKEY,JSON.stringify({week:weekKey(),teams:current}))}catch(e){}};
+function validTeams(t){const all=allNames();return Array.isArray(t)&&t.length>=2&&t.every(x=>Array.isArray(x)&&x.every(n=>all.includes(n)))}
+try{const r=JSON.parse(localStorage.getItem(RKEY)||'null');if(r&&r.week===weekKey()&&validTeams(r.teams))current=r.teams}catch(e){}
 
 /* ---------- 이미지 ---------- */
 function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
@@ -411,11 +420,33 @@ $('bulkOut').onclick=async()=>{
   catch(e){$('bulk').select();$('bulkMsg').textContent='위 내용을 복사해서 사용하세요.'}
 };
 
+/* ---------- 주소로 넘어온 데이터 가져오기 ---------- */
+try{
+  const q=new URLSearchParams(location.search).get('d');
+  if(q){
+    const o=JSON.parse(decodeURIComponent(escape(atob(q))));
+    if(o&&o.d&&o.d.stats){
+      Object.assign(data.stats,o.d.stats);
+      (o.d.guests||[]).forEach(g=>{if(g&&g.name&&!isGuest(g.name)&&!NAMES.includes(g.name))data.guests.push({name:g.name})});
+      save();
+      if(o.w===weekKey()){
+        if(Array.isArray(o.p)){present.clear();o.p.filter(n=>allNames().includes(n)).forEach(n=>present.add(n));savePresent()}
+        if(validTeams(o.t)){current=o.t;saveResult()}
+      }
+    }
+    history.replaceState(null,'',location.pathname);   // 주소창에서 데이터 제거
+  }
+}catch(e){}
+if(current)showResult(false);
+
 /* ---------- 카카오톡 내부 브라우저 대응 ---------- */
 if(/KAKAOTALK/i.test(navigator.userAgent)){
   $('kakaoBanner').style.display='';
   $('openExt').onclick=()=>{
-    location.href='kakaotalk://web/openExternal?url='+encodeURIComponent(location.href.split('#')[0]);
+    // 능력치·참석자·짜 놓은 팀을 주소에 실어서 보냄 (크롬/사파리는 저장 공간이 따로라서)
+    const pack=btoa(unescape(encodeURIComponent(JSON.stringify({d:data,p:[...present],w:weekKey(),t:current}))));
+    const url=location.href.split('#')[0].split('?')[0]+'?d='+encodeURIComponent(pack);
+    location.href='kakaotalk://web/openExternal?url='+encodeURIComponent(url);
     setTimeout(()=>{$('kakaoMsg').textContent='안 열리면 오른쪽 위 ⋮ (또는 공유) 메뉴에서 "다른 브라우저로 열기"를 누르세요.'},1500);
   };
 }
