@@ -85,7 +85,7 @@
 
   <div class="card" id="pickCard">
     <div class="row between">
-      <h2>오늘 참석자 <span class="badge" id="cnt">0</span></h2>
+      <h2>금주 참석자<span class="badge" id="cnt">0</span></h2>
       <div class="row"><button class="btn" id="allOn">전체</button><button class="btn" id="allOff">해제</button></div>
     </div>
     <div class="members" id="members"></div>
@@ -178,8 +178,9 @@ async function tryUnlock(pass,remember){
 
 /* ---------- 화면 ---------- */
 const WD=['일','월','화','수','목','금','토'];
-function dateStr(){const d=new Date();return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} (${WD[d.getDay()]})`}
-$('today').textContent=dateStr();
+function sunday(){const d=new Date();d.setDate(d.getDate()+(7-d.getDay())%7);return d}   // 금주 일요일 (월~일 기준, 일요일이면 당일)
+function dateStr(){const d=sunday();return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} (${WD[d.getDay()]})`}
+$('today').textContent='금주 일요일 · '+dateStr();
 
 function plan(n){ // 팀 수/크기: 팀당 최소 5명, 남는 인원은 팀에 한 명씩 추가
   const maxK=Math.floor(n/MIN); return maxK;
@@ -230,12 +231,15 @@ function makeCost(all,k){
   };
 }
 function balance(att,k){
-  const n=att.length, b=Math.floor(n/k), rem=n-b*k, cost=makeCost(att,k);
+  // 1) 남는 인원(대기)을 무작위로 먼저 빼고  2) 나머지를 팀 인원 같게 점수 균형으로 나눈 뒤
+  // 3) 빼 둔 인원은 아무 팀에나 한 명씩 넣는다
+  const n=att.length, b=Math.floor(n/k), rem=n-b*k;
+  const pool=shuffle(att), extras=pool.slice(b*k), main=pool.slice(0,b*k), cost=makeCost(main,k);
   let best=null,bestC=Infinity;
   for(let r=0;r<40;r++){
-    const sizes=shuffle(Array.from({length:k},(_,i)=>b+(i<rem?1:0)));   // 추가 1명이 들어갈 팀은 매번 무작위
+    const sizes=Array.from({length:k},()=>b);
     const teams=Array.from({length:k},()=>[]);
-    shuffle(att).sort((x,y)=>y.score-x.score).forEach(p=>{
+    shuffle(main).sort((x,y)=>y.score-x.score).forEach(p=>{
       let bi=-1,bs=Infinity;
       teams.forEach((t,i)=>{if(t.length<sizes[i]){const s=sum(t)+Math.random()*.01;if(s<bs){bs=s;bi=i}}});
       teams[bi].push(p);
@@ -252,6 +256,7 @@ function balance(att,k){
     }
     if(cur<bestC-1e-9||(Math.abs(cur-bestC)<1e-9&&Math.random()<.5)){bestC=cur;best=teams.map(t=>t.slice())}
   }
+  shuffle(best.map((_,i)=>i)).slice(0,rem).forEach((ti,i)=>best[ti].push(extras[i]));
   return best.map(t=>t.map(p=>p.name).sort(kor)).sort((a,b)=>b.length-a.length);   // 점수는 결과에 노출하지 않음
 }
 
@@ -273,7 +278,8 @@ function go(){
 /* ---------- 이미지 저장 ---------- */
 function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
 async function makeImage(){
-  try{await document.fonts.load('900 40px "Noto Sans KR"');await document.fonts.load('700 40px "Noto Sans KR"')}catch(e){}
+  // 폰트 로딩이 멈춰도 이미지 생성이 끊기지 않도록 1.5초 제한
+  try{await Promise.race([Promise.all([document.fonts.load('900 40px "Noto Sans KR"'),document.fonts.load('700 40px "Noto Sans KR"')]),new Promise(r=>setTimeout(r,1500))])}catch(e){}
   const F='"Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif';
   const W=1080,P=44,G=22,k=current.length;
   const cols=k<=3?k:(k===4?2:3), rows=Math.ceil(k/cols);
@@ -315,19 +321,29 @@ let imgPromise=null;
 function prepareImage(){      // 팀을 짠 직후 미리 만들어 둠 → 공유 버튼이 바로 반응
   imgBlob=null;
   imgPromise=makeImage().then(b=>{imgBlob=b;if(imgUrl)URL.revokeObjectURL(imgUrl);imgUrl=URL.createObjectURL(b);return b});
+  imgPromise.catch(()=>{});
 }
+function toast(msg){const n=$('sizeNote');n.textContent=msg}
 function showPreview(){$('shotImg').src=imgUrl;$('modal').classList.add('show')}
 async function shot(){        // 카카오톡 등으로 바로 공유
   if(!current)return;
-  const blob=imgBlob||await imgPromise;
-  const f=new File([blob],fileName(),{type:'image/png'});
-  if(navigator.canShare&&navigator.canShare({files:[f]})){
-    try{await navigator.share({files:[f]});return}catch(e){if(e.name==='AbortError')return}
-  }
-  showPreview();               // 공유 미지원(PC 등) → 미리보기에서 저장
+  try{
+    if(!imgBlob){$('shot').textContent='이미지 만드는 중…';await imgPromise}
+    const f=new File([imgBlob],fileName(),{type:'image/png'});
+    if(navigator.canShare&&navigator.canShare({files:[f]})){
+      try{await navigator.share({files:[f]});return}
+      catch(e){if(e.name==='AbortError')return}   // 그 외 오류는 미리보기로 대체
+    }
+    showPreview();             // 공유 미지원(PC·카톡 내부 브라우저 등) → 미리보기에서 길게 눌러 저장
+  }catch(e){
+    toast('이미지를 만들지 못했습니다. 팀 짜기를 다시 눌러 주세요.');
+  }finally{$('shot').textContent='카카오톡 등으로 공유'}
 }
-async function preview(){if(current){await (imgBlob||imgPromise);showPreview()}}
-function fileName(){const d=new Date();return `팀배정_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.png`}
+async function preview(){
+  if(!current)return;
+  try{await (imgBlob||imgPromise);showPreview()}catch(e){toast('이미지를 만들지 못했습니다. 팀 짜기를 다시 눌러 주세요.')}
+}
+function fileName(){const d=sunday();return `팀배정_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.png`}
 $('shareBtn').onclick=async()=>{
   const f=new File([imgBlob],fileName(),{type:'image/png'});
   if(navigator.canShare&&navigator.canShare({files:[f]})){
