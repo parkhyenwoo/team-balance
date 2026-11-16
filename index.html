@@ -174,7 +174,7 @@ try{const p=JSON.parse(localStorage.getItem(PKEY)||'null');if(p&&p.week===weekKe
 const savePresent=()=>{try{localStorage.setItem(PKEY,JSON.stringify({week:weekKey(),names:[...present]}))}catch(e){}};
 
 let editing=false, current=null, imgBlob=null, imgUrl='', imgPromise=null;
-const allNames=()=>NAMES.concat(data.guests.map(g=>g.name));
+const allNames=()=>NAMES.concat(data.guests.map(g=>g.name)).sort(kor);   // 가나다 순
 const isGuest=n=>data.guests.some(g=>g.name===n);
 const vOf=n=>data.stats[n]||DEFAULT_V;
 const members=()=>allNames().map(name=>({name,v:vOf(name)}));
