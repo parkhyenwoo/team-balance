@@ -137,9 +137,10 @@
 <script>
 const NAMES=['윤성필','김권태','최종석','박현우','최승민','뽕규태','김병규','강기웅','전제영','강관태','윤대섭','김찬호','조재승','김진무','조우균','서국석','백인권','최혁순','이제연','김성래','김보균','김임배','손동현','이상현'];
 const DEFAULT_SCORE=70, MIN=5, KEY='futsal_v3', PWKEY='futsal_pw';
-const TEAMS=[
-  {n:'빨강',c:'#e5484d',t:'#ffffff'},{n:'파랑',c:'#2f6fed',t:'#ffffff'},{n:'노랑',c:'#f5b82e',t:'#2a2100'},
-  {n:'초록',c:'#1f9d63',t:'#ffffff'},{n:'보라',c:'#8b5cf6',t:'#ffffff'},{n:'주황',c:'#f97316',t:'#ffffff'}];
+const TEAMS=[   // 조끼 색: 흰색, 파란색, 핑크색, 연두색 (5팀 이상일 때만 아래 보조색 사용)
+  {n:'흰색',c:'#ffffff',t:'#14211a',line:'#cfd8d2'},{n:'파란색',c:'#2f6fed',t:'#ffffff'},
+  {n:'핑크색',c:'#ff7eb6',t:'#3a0a22'},{n:'연두색',c:'#9be15d',t:'#14300a'},
+  {n:'보라색',c:'#8b5cf6',t:'#ffffff'},{n:'주황색',c:'#f97316',t:'#ffffff'}];
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const kor=(a,b)=>a.localeCompare(b,'ko');
@@ -267,7 +268,7 @@ function go(){
   current=balance(att,k);
   $('resCard').style.display='';
   $('result').innerHTML=`<div class="teams">${current.map((t,i)=>{const s=TEAMS[i];return `
-    <div class="team"><h3 style="background:${s.c};color:${s.t}">${s.n}팀<span>${t.length}명</span></h3>
+    <div class="team"><h3 style="background:${s.c};color:${s.t}${s.line?';border-bottom:2px solid '+s.line:''}">${s.n}팀<span>${t.length}명</span></h3>
     <ul>${t.map(n=>`<li>${esc(n)}</li>`).join('')}</ul></div>`}).join('')}</div>`;
   const sizes=[...new Set(current.map(t=>t.length))];
   $('sizeNote').textContent=sizes.length>1?'인원이 많은 팀은 경기 중 서로 교체하며 뛰면 됩니다.':'';
@@ -301,7 +302,7 @@ async function makeImage(){
     for(let c=0;c<cols;c++){
       const i=r*cols+c; if(i>=k)break; const t=current[i], s=TEAMS[i], bx=P+c*(cw+G);
       x.fillStyle='#ffffff';rr(x,bx,y,cw,h,26);x.fill();
-      x.save();rr(x,bx,y,cw,h,26);x.clip();x.fillStyle=s.c;x.fillRect(bx,y,cw,headH);x.restore();
+      x.save();rr(x,bx,y,cw,h,26);x.clip();x.fillStyle=s.c;x.fillRect(bx,y,cw,headH);if(s.line){x.fillStyle=s.line;x.fillRect(bx,y+headH-3,cw,3)}x.restore();x.strokeStyle='#d5ddd7';x.lineWidth=2;rr(x,bx,y,cw,h,26);x.stroke();
       x.fillStyle=s.t;x.font=`900 46px ${F}`;x.textAlign='left';x.fillText(`${s.n}팀`,bx+26,y+60);
       x.font=`500 30px ${F}`;x.textAlign='right';x.fillText(`${t.length}명`,bx+cw-26,y+58);x.textAlign='left';
       x.fillStyle='#14211a';x.font=`700 ${nameSize}px ${F}`;
