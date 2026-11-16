@@ -2,220 +2,379 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>풋살 팀 밸런서</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#f4f6f8;--card:#fff;--text:#1d2733;--sub:#667085;--line:#e3e8ee;--pri:#1f7a4d;--priBg:#e3f4ea}
-  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#12161b;--card:#1c222a;--text:#e8edf2;--sub:#97a3b0;--line:#2c3540;--pri:#3cb27a;--priBg:#1c3a2c}}
-  :root[data-theme="dark"]{color-scheme:dark;--bg:#12161b;--card:#1c222a;--text:#e8edf2;--sub:#97a3b0;--line:#2c3540;--pri:#3cb27a;--priBg:#1c3a2c}
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:"Malgun Gothic",system-ui,sans-serif}
-  .wrap{max-width:980px;margin:0 auto;padding:16px}
-  h1{font-size:22px;margin:4px 0 14px}
-  h2{font-size:16px;margin:0 0 10px}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
-  @media (max-width:760px){.grid{grid-template-columns:1fr}}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+  :root{
+    --bg:#eef2ee; --card:#ffffff; --ink:#14211a; --sub:#667a6e; --line:#dde6df;
+    --pri:#157347; --priInk:#ffffff; --priSoft:#dff3e6; --hero:#0f3d28; --heroInk:#ffffff;
+    --font:"Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    color-scheme:dark;--bg:#0e1511;--card:#17211b;--ink:#e9f1ec;--sub:#8fa597;--line:#26342b;
+    --pri:#35b172;--priInk:#06140c;--priSoft:#173a28;--hero:#0a2a1b}}
+  :root[data-theme="dark"]{color-scheme:dark;--bg:#0e1511;--card:#17211b;--ink:#e9f1ec;--sub:#8fa597;--line:#26342b;
+    --pri:#35b172;--priInk:#06140c;--priSoft:#173a28;--hero:#0a2a1b}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);padding-bottom:110px}
+  .wrap{max-width:720px;margin:0 auto;padding:0 16px}
+  .hero{background:var(--hero);color:var(--heroInk);padding:max(22px,env(safe-area-inset-top)) 0 26px;margin-bottom:16px}
+  .hero .wrap{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+  .hero h1{margin:0;font-size:26px;font-weight:900;letter-spacing:-.5px}
+  .hero p{margin:4px 0 0;opacity:.75;font-size:14px}
+  .hero button{background:rgba(255,255,255,.14);color:#fff;border:0;border-radius:10px;padding:9px 13px;font:inherit;font-size:14px;cursor:pointer}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px}
+  .card h2{margin:0 0 4px;font-size:17px;font-weight:700}
+  .hint{color:var(--sub);font-size:13px;line-height:1.5}
   .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  input[type=text],input[type=number],select{padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font-size:15px}
-  input[type=text]{flex:1;min-width:100px}
-  button{padding:9px 14px;border:0;border-radius:8px;background:var(--pri);color:#fff;font-size:15px;cursor:pointer}
-  button.ghost{background:transparent;color:var(--sub);border:1px solid var(--line)}
-  button.big{width:100%;padding:13px;font-size:17px;margin-top:10px}
-  .members{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px;margin-top:10px}
-  .chip{padding:11px 6px;border:2px solid var(--line);border-radius:10px;background:var(--bg);text-align:center;font-size:15px;cursor:pointer;user-select:none;position:relative}
-  .chip.on{border-color:var(--pri);background:var(--priBg);font-weight:700}
-  .chip small{display:block;color:var(--sub);font-weight:400;font-size:12px}
-  .edit{display:flex;align-items:center;gap:8px;padding:6px 2px;border-bottom:1px solid var(--line)}
-  .edit .n{flex:1}
-  .edit input[type=number]{width:76px}
-  .x{padding:3px 9px;background:transparent;color:var(--sub);border:1px solid var(--line)}
-  .sum{color:var(--sub);font-size:14px;margin:6px 0}
-  .teams{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:10px}
-  .team{border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--bg)}
-  .team h3{margin:0 0 6px;font-size:15px;display:flex;justify-content:space-between}
-  .team .m{display:flex;justify-content:space-between;padding:3px 0}
-  .bench{margin-top:10px;font-size:14px}
-  .hint{color:var(--sub);font-size:13px;margin-top:6px}
-  label.chk{display:flex;gap:6px;align-items:center;font-size:14px}
+  .between{justify-content:space-between}
+  button{font:inherit;cursor:pointer}
+  .btn{padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--ink);font-size:14px}
+  .btn.pri{background:var(--pri);color:var(--priInk);border-color:var(--pri);font-weight:700}
+  input,select{font:inherit;font-size:15px;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+  input[type=text],input[type=password]{flex:1;min-width:110px}
+  .members{display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:9px;margin-top:12px}
+  .chip{padding:14px 4px;border:2px solid var(--line);border-radius:12px;background:var(--bg);text-align:center;font-size:16px;font-weight:500;cursor:pointer;user-select:none;transition:transform .08s}
+  .chip:active{transform:scale(.96)}
+  .chip.on{border-color:var(--pri);background:var(--priSoft);font-weight:900;color:var(--ink)}
+  .chip small{display:block;font-size:11px;color:var(--sub);font-weight:400}
+  .badge{display:inline-block;background:var(--pri);color:var(--priInk);border-radius:99px;padding:2px 10px;font-size:13px;font-weight:700;margin-left:6px}
+  .edit{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line)}
+  .edit .n{flex:1}.edit input{width:78px}
+  .notice{background:var(--priSoft);border-radius:12px;padding:11px 13px;font-size:14px;margin-top:10px}
+  .teams{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:12px}
+  .team{border-radius:14px;overflow:hidden;border:1px solid var(--line);background:var(--card)}
+  .team h3{margin:0;padding:11px 13px;font-size:17px;font-weight:900;display:flex;justify-content:space-between;align-items:center}
+  .team h3 span{font-weight:500;font-size:13px;opacity:.9}
+  .team ul{list-style:none;margin:0;padding:6px 13px 10px}
+  .team li{padding:8px 0;font-size:18px;font-weight:700;border-bottom:1px dashed var(--line)}
+  .team li:last-child{border:0}
+  .bar{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px 16px max(12px,env(safe-area-inset-bottom));z-index:5}
+  .bar .in{max-width:720px;margin:0 auto;display:flex;gap:10px;align-items:center}
+  .bar .info{flex:1;font-size:14px;line-height:1.35}
+  .bar .info b{font-size:17px}
+  .bar .btn.pri{padding:14px 22px;font-size:17px}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:20;display:none;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:12px}
+  .modal.show{display:flex}
+  .modal img{max-width:100%;max-height:68vh;border-radius:12px;background:#fff}
+  .modal .row{justify-content:center}
+  .modal .btn{background:#fff;color:#111;border-color:#fff}
+  .modal .btn.pri{background:var(--pri);color:var(--priInk);border-color:var(--pri)}
+  .modal p{color:#fff;font-size:13px;margin:0;text-align:center}
 </style>
 </head>
 <body>
+<div class="hero"><div class="wrap">
+  <div><h1>풋살 팀 밸런서</h1><p id="today"></p></div>
+  <button id="editBtn">설정</button>
+</div></div>
+
 <div class="wrap">
-  <h1>⚽ 풋살 팀 밸런서</h1>
-  <div class="grid">
-    <div class="card">
-      <div class="row" style="justify-content:space-between">
-        <h2 style="margin:0">오늘 참석자 <span id="cnt" class="hint"></span></h2>
-        <button class="ghost" id="editBtn">점수 편집</button>
-      </div>
-
-      <div id="viewMode">
-        <div class="row" style="margin-top:10px">
-          <button class="ghost" id="allOn">전체 선택</button>
-          <button class="ghost" id="allOff">전체 해제</button>
-        </div>
-        <div class="members" id="members"></div>
-        <div class="hint">이름을 누르면 참석 체크/해제됩니다.</div>
-      </div>
-
-      <div id="editMode" style="display:none;margin-top:10px">
-        <div id="editList"></div>
-        <div class="row" style="margin-top:10px">
-          <input type="text" id="nm" placeholder="새 회원 이름" maxlength="12">
-          <input type="number" id="sc" value="70" min="0" max="100" style="width:76px">
-          <button id="add">추가</button>
-        </div>
-        <div class="hint">점수는 자동 저장됩니다. (기본값 70 = 아직 미입력)</div>
-        <button class="ghost" id="reset" style="margin-top:10px">전체 점수 70으로 초기화</button>
-      </div>
+  <div class="card" id="lockCard" style="display:none">
+    <h2>점수 잠금 해제</h2>
+    <div class="hint">개인 점수는 암호화돼 있습니다. 비밀번호를 한 번 입력하면 이 기기에 기억됩니다.</div>
+    <div class="row" style="margin-top:10px">
+      <input type="password" id="pw" placeholder="비밀번호" autocomplete="off">
+      <button class="btn pri" id="unlock">잠금 해제</button>
     </div>
+    <div class="hint" id="lockMsg"></div>
+  </div>
 
-    <div class="card">
-      <h2>팀 짜기</h2>
-      <div id="info" class="sum"></div>
-      <div class="row">
-        <label>팀 수 <select id="teamsSel"></select></label>
-        <label class="chk"><input type="checkbox" id="showScore"> 결과에 점수 표시</label>
-      </div>
-      <div class="hint">팀당 최소 5명 기준으로 팀 수를 자동 계산하고, 남는 인원은 대기로 뺍니다.</div>
-      <button class="big" id="go">팀 짜기 / 다시 섞기</button>
-      <div id="result"></div>
-      <button class="ghost big" id="copy" style="display:none">결과 복사 (카톡용)</button>
-      <textarea id="fallback" style="display:none;width:100%;min-height:90px;margin-top:8px" readonly></textarea>
+  <div class="card" id="pickCard">
+    <div class="row between">
+      <h2>오늘 참석자 <span class="badge" id="cnt">0</span></h2>
+      <div class="row"><button class="btn" id="allOn">전체</button><button class="btn" id="allOff">해제</button></div>
     </div>
+    <div class="members" id="members"></div>
+    <div class="hint" style="margin-top:10px">이름을 눌러 참석 체크 · 한 번 더 누르면 취소</div>
+  </div>
+
+  <div class="card" id="editCard" style="display:none">
+    <h2>설정</h2>
+    <div class="hint" id="editNote">점수는 이 기기에서만 임시로 바꿉니다. 영구 변경은 코드에 반영해야 합니다.</div>
+    <div id="editList"></div>
+    <div class="row" style="margin-top:12px">
+      <input type="text" id="gn" placeholder="게스트 이름" maxlength="12">
+      <input type="number" id="gs" value="70" min="0" max="100" style="width:78px">
+      <button class="btn pri" id="gadd">게스트 추가</button>
+    </div>
+  </div>
+
+  <div class="card" id="resCard" style="display:none">
+    <div class="row between">
+      <h2>팀 배정 결과</h2>
+      <button class="btn" id="copy">텍스트 복사</button>
+    </div>
+    <div id="result"></div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn pri" id="shot" style="flex:1;padding:14px">사진으로 저장</button>
+    </div>
+    <div class="hint" id="sizeNote"></div>
   </div>
 </div>
 
+<div class="bar"><div class="in">
+  <div class="info"><b id="barMain">참석자를 선택하세요</b><br><span class="hint" id="barSub"></span></div>
+  <select id="teamsSel" title="팀 수"></select>
+  <button class="btn pri" id="go">팀 짜기</button>
+</div></div>
+
+<div class="modal" id="modal">
+  <img id="shotImg" alt="팀 배정 이미지">
+  <p>이미지를 길게 눌러 저장할 수도 있습니다</p>
+  <div class="row">
+    <button class="btn pri" id="shareBtn">갤러리/공유로 저장</button>
+    <button class="btn" id="dlBtn">파일로 받기</button>
+    <button class="btn" id="closeBtn">닫기</button>
+  </div>
+</div>
+
+<script src="scores.enc.js" onerror="void 0"></script>
 <script>
-const DEFAULT_NAMES=['윤성필','김권태','최종석','박현우','최승민','뽕규태','김병규','강기웅','전제영','강관태','윤대섭','김찬호','조재승','김진무','조우균','서국석','백인권','최혁순','이제연','김성래','김보균','김임배','손동현','이상현'];
-const DEFAULT_SCORE=70, MIN=5, KEY='futsal_v2';
+const NAMES=['윤성필','김권태','최종석','박현우','최승민','뽕규태','김병규','강기웅','전제영','강관태','윤대섭','김찬호','조재승','김진무','조우균','서국석','백인권','최혁순','이제연','김성래','김보균','김임배','손동현','이상현'];
+const DEFAULT_SCORE=70, MIN=5, KEY='futsal_v3', PWKEY='futsal_pw';
+const TEAMS=[
+  {n:'빨강',c:'#e5484d',t:'#ffffff'},{n:'파랑',c:'#2f6fed',t:'#ffffff'},{n:'노랑',c:'#f5b82e',t:'#2a2100'},
+  {n:'초록',c:'#1f9d63',t:'#ffffff'},{n:'보라',c:'#8b5cf6',t:'#ffffff'},{n:'주황',c:'#f97316',t:'#ffffff'}];
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const kor=(a,b)=>a.localeCompare(b,'ko');
 
-let members=DEFAULT_NAMES.map(n=>({name:n,score:DEFAULT_SCORE}));
-try{
-  const s=JSON.parse(localStorage.getItem(KEY)||'null');
-  if(Array.isArray(s)&&s.length)members=s.map(m=>({name:String(m.name),score:+m.score||DEFAULT_SCORE}));
-}catch(e){}
-const present=new Set();           // 오늘 참석 (저장 안 함: 매번 새로 체크)
-let editing=false, lastText='';
-const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(members))}catch(e){}};
+/* ---------- 상태 ---------- */
+let base={};                      // 암호 해제된 점수
+let local={over:{},guests:[]};    // 이 기기 임시 수정/게스트
+try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&s.over&&s.guests)local=s}catch(e){}
+const saveLocal=()=>{try{localStorage.setItem(KEY,JSON.stringify(local))}catch(e){}};
+const present=new Set();
+let editing=false, unlocked=!window.SCORES_ENC, current=null, imgBlob=null, imgUrl='';
 
-function render(){
-  $('viewMode').style.display=editing?'none':'';
-  $('editMode').style.display=editing?'':'none';
-  $('editBtn').textContent=editing?'완료':'점수 편집';
-  $('cnt').textContent=`(${present.size} / ${members.length}명)`;
-  if(editing){
-    $('editList').innerHTML=members.map((m,i)=>`<div class="edit"><span class="n">${esc(m.name)}</span>
-      <input type="number" min="0" max="100" value="${m.score}" data-sc="${i}">
-      <button class="x" data-del="${i}">✕</button></div>`).join('');
-  }else{
-    $('members').innerHTML=members.map((m,i)=>`<div class="chip ${present.has(m.name)?'on':''}" data-i="${i}">${esc(m.name)}</div>`).join('');
-  }
-  updateInfo();
+const allNames=()=>NAMES.concat(local.guests.map(g=>g.name));
+const scoreOf=n=>{
+  if(n in local.over)return local.over[n];
+  const g=local.guests.find(g=>g.name===n); if(g)return g.score;
+  return n in base?base[n]:DEFAULT_SCORE;
+};
+const members=()=>allNames().map(name=>({name,score:scoreOf(name)}));
+
+/* ---------- 점수 복호화 (WebCrypto AES-GCM + PBKDF2) ---------- */
+const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function decryptScores(pass,enc){
+  const km=await crypto.subtle.importKey('raw',new TextEncoder().encode(pass),'PBKDF2',false,['deriveKey']);
+  const key=await crypto.subtle.deriveKey({name:'PBKDF2',salt:b64(enc.s),iterations:enc.it,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['decrypt']);
+  const buf=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(enc.i)},key,b64(enc.d));
+  return JSON.parse(new TextDecoder().decode(buf));
+}
+async function tryUnlock(pass,remember){
+  try{
+    base=await decryptScores(pass,window.SCORES_ENC); unlocked=true;
+    if(remember)try{localStorage.setItem(PWKEY,pass)}catch(e){}
+    return true;
+  }catch(e){return false}
 }
 
-function updateInfo(){
-  const n=present.size, mt=Math.floor(n/MIN), sel=$('teamsSel'), prev=+sel.value;
+/* ---------- 화면 ---------- */
+const WD=['일','월','화','수','목','금','토'];
+function dateStr(){const d=new Date();return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} (${WD[d.getDay()]})`}
+$('today').textContent=dateStr();
+
+function plan(n){ // 팀 수/크기: 팀당 최소 5명, 남는 인원은 팀에 한 명씩 추가
+  const maxK=Math.floor(n/MIN); return maxK;
+}
+function render(){
+  $('lockCard').style.display=(window.SCORES_ENC&&!unlocked)?'':'none';
+  $('editCard').style.display=editing?'':'none';
+  $('editBtn').textContent=editing?'닫기':'설정';
+  const all=allNames();
+  $('members').innerHTML=all.map(n=>`<div class="chip ${present.has(n)?'on':''}" data-n="${esc(n)}">${esc(n)}${local.guests.some(g=>g.name===n)?'<small>게스트</small>':''}</div>`).join('');
+  $('cnt').textContent=present.size;
+  if(editing){
+    const can=unlocked;
+    $('editList').innerHTML=can?members().map(m=>`<div class="edit"><span class="n">${esc(m.name)}</span>
+      <input type="number" min="0" max="100" value="${m.score}" data-sc="${esc(m.name)}">
+      ${local.guests.some(g=>g.name===m.name)?`<button class="btn" data-del="${esc(m.name)}">삭제</button>`:''}</div>`).join('')
+      :'<div class="notice">점수 잠금을 먼저 해제하세요.</div>';
+  }
+  updateBar();
+}
+function updateBar(){
+  const n=present.size, mt=plan(n), sel=$('teamsSel'), prev=+sel.value;
   sel.innerHTML=mt<2?'<option value="0">-</option>':Array.from({length:mt-1},(_,k)=>k+2).map(k=>`<option value="${k}">${k}팀</option>`).join('');
   if(mt>=2)sel.value=(sel.dataset.manual==='1'&&prev>=2&&prev<=mt)?prev:mt;
   const k=+sel.value;
-  if(mt<2){$('info').textContent=`참석 ${n}명 — 최소 ${MIN*2}명 필요`;return}
-  const size=Math.floor(n/k), left=n-size*k;
-  $('info').textContent=`참석 ${n}명 → ${k}팀 × ${size}명`+(left?` + 대기 ${left}명`:'');
+  if(mt<2){$('barMain').textContent=`참석 ${n}명`;$('barSub').textContent=`최소 ${MIN*2}명이 필요해요`;$('go').disabled=true;$('go').style.opacity=.5;return}
+  $('go').disabled=false;$('go').style.opacity=1;
+  const base=Math.floor(n/k), rem=n-base*k;
+  $('barMain').textContent=`참석 ${n}명`;
+  $('barSub').textContent=`${k}팀 · `+(rem?`${base+1}명 ${rem}팀 + ${base}명 ${k-rem}팀`:`팀당 ${base}명`);
 }
 
-/* ---------- 밸런스 알고리즘 ---------- */
-const sumOf=t=>t.reduce((a,p)=>a+p.score,0);
+/* ---------- 밸런스 ---------- */
 const variance=a=>{const m=a.reduce((x,y)=>x+y,0)/a.length;return a.reduce((x,v)=>x+(v-m)**2,0)/a.length};
+const sum=t=>t.reduce((a,p)=>a+p.score,0);
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
 
 function makeCost(all,k){
-  // 상/중/하 3등분 그룹을 정해 팀마다 골고루 분산되도록 함
-  const sorted=all.slice().sort((a,b)=>b.score-a.score);
-  const grp=new Map();
+  const base=Math.floor(all.length/k);
+  const sorted=all.slice().sort((a,b)=>b.score-a.score), grp=new Map();
   sorted.forEach((p,i)=>grp.set(p.name,Math.min(2,Math.floor(i*3/sorted.length))));
   return teams=>{
-    let c=variance(teams.map(sumOf))*10;                 // 총점 균형 (가장 중요)
-    c+=variance(teams.map(t=>Math.max(...t.map(p=>p.score))))*1;   // 에이스 균형
-    c+=variance(teams.map(t=>Math.min(...t.map(p=>p.score))))*1;   // 약한 선수 균형
-    for(let g=0;g<3;g++)c+=variance(teams.map(t=>t.filter(p=>grp.get(p.name)===g).length))*60; // 상/중/하 분포
+    let c=variance(teams.map(t=>sum(t)/t.length))*10*base*base;           // 팀 평균 점수 균형
+    c+=variance(teams.map(t=>Math.max(...t.map(p=>p.score))));            // 에이스 균형
+    c+=variance(teams.map(t=>Math.min(...t.map(p=>p.score))));            // 약한 선수 균형
+    for(let g=0;g<3;g++)c+=variance(teams.map(t=>t.filter(p=>grp.get(p.name)===g).length/t.length))*60*base*base; // 상/중/하 분포
     return c;
   };
 }
-const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
-
 function balance(att,k){
-  const size=Math.floor(att.length/k), cost=makeCost(att,k);
+  const n=att.length, b=Math.floor(n/k), rem=n-b*k, cost=makeCost(att,k);
   let best=null,bestC=Infinity;
   for(let r=0;r<40;r++){
-    const pool=shuffle(att), bench=pool.slice(size*k);
-    const play=pool.slice(0,size*k).sort((a,b)=>b.score-a.score);
+    const sizes=shuffle(Array.from({length:k},(_,i)=>b+(i<rem?1:0)));   // 추가 1명이 들어갈 팀은 매번 무작위
     const teams=Array.from({length:k},()=>[]);
-    play.forEach((p,i)=>{const row=i/k|0,c=i%k;teams[row%2?k-1-c:c].push(p)});
+    shuffle(att).sort((x,y)=>y.score-x.score).forEach(p=>{
+      let bi=-1,bs=Infinity;
+      teams.forEach((t,i)=>{if(t.length<sizes[i]){const s=sum(t)+Math.random()*.01;if(s<bs){bs=s;bi=i}}});
+      teams[bi].push(p);
+    });
     let cur=cost(teams),improved=true,guard=0;
     while(improved&&guard++<60){
       improved=false;
-      for(let a=0;a<k;a++)for(let b=a+1;b<k;b++)for(let i=0;i<size;i++)for(let j=0;j<size;j++){
-        if(teams[a][i].score===teams[b][j].score)continue;
-        [teams[a][i],teams[b][j]]=[teams[b][j],teams[a][i]];
-        const c=cost(teams);
-        if(c<cur-1e-9){cur=c;improved=true}else{[teams[a][i],teams[b][j]]=[teams[b][j],teams[a][i]]}
+      for(let a=0;a<k;a++)for(let c=a+1;c<k;c++)for(let i=0;i<teams[a].length;i++)for(let j=0;j<teams[c].length;j++){
+        if(teams[a][i].score===teams[c][j].score)continue;
+        [teams[a][i],teams[c][j]]=[teams[c][j],teams[a][i]];
+        const v=cost(teams);
+        if(v<cur-1e-9){cur=v;improved=true}else{[teams[a][i],teams[c][j]]=[teams[c][j],teams[a][i]]}
       }
     }
-    if(cur<bestC-1e-9||(Math.abs(cur-bestC)<1e-9&&Math.random()<.5)){bestC=cur;best={teams:teams.map(t=>t.slice()),bench}}
+    if(cur<bestC-1e-9||(Math.abs(cur-bestC)<1e-9&&Math.random()<.5)){bestC=cur;best=teams.map(t=>t.slice())}
   }
-  return best;
+  return best.map(t=>t.map(p=>p.name).sort(kor)).sort((a,b)=>b.length-a.length);   // 점수는 결과에 노출하지 않음
 }
 
 /* ---------- 결과 ---------- */
-const TNAME=['A팀','B팀','C팀','D팀','E팀','F팀'];
 function go(){
-  const att=members.filter(m=>present.has(m.name)), k=+$('teamsSel').value;
-  if(att.length<MIN*2||k<2){$('result').innerHTML='<div class="hint">참석자가 10명 이상이어야 합니다.</div>';$('copy').style.display='none';return}
-  const {teams,bench}=balance(att,k), show=$('showScore').checked;
-  const ord=t=>t.slice().sort((a,b)=>b.score-a.score);
-  $('result').innerHTML=`<div class="teams">${teams.map((t,i)=>`
-    <div class="team"><h3><span>${TNAME[i]} (${t.length}명)</span>${show?`<span class="hint">합 ${sumOf(t)} · 평균 ${(sumOf(t)/t.length).toFixed(1)}</span>`:''}</h3>
-    ${ord(t).map(p=>`<div class="m"><span>${esc(p.name)}</span>${show?`<span class="hint">${p.score}</span>`:''}</div>`).join('')}</div>`).join('')}</div>`+
-    (bench.length?`<div class="bench"><b>대기</b> : ${bench.map(p=>esc(p.name)+(show?`(${p.score})`:'')).join(', ')}</div>`:'');
-  lastText=teams.map((t,i)=>`[${TNAME[i]}] `+ord(t).map(p=>p.name+(show?`(${p.score})`:'')).join(', ')).join('\n')+(bench.length?`\n[대기] `+bench.map(p=>p.name).join(', '):'');
-  $('copy').style.display='block';
+  const att=members().filter(m=>present.has(m.name)), k=+$('teamsSel').value;
+  if(att.length<MIN*2||k<2)return;
+  current=balance(att,k);
+  $('resCard').style.display='';
+  $('result').innerHTML=`<div class="teams">${current.map((t,i)=>{const s=TEAMS[i];return `
+    <div class="team"><h3 style="background:${s.c};color:${s.t}">${s.n}팀<span>${t.length}명</span></h3>
+    <ul>${t.map(n=>`<li>${esc(n)}</li>`).join('')}</ul></div>`}).join('')}</div>`;
+  const sizes=[...new Set(current.map(t=>t.length))];
+  $('sizeNote').textContent=sizes.length>1?'인원이 많은 팀은 경기 중 서로 교체하며 뛰면 됩니다.':'';
+  $('resCard').scrollIntoView({behavior:'smooth',block:'start'});
 }
+
+/* ---------- 이미지 저장 ---------- */
+function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+async function makeImage(){
+  try{await document.fonts.load('900 40px "Noto Sans KR"');await document.fonts.load('700 40px "Noto Sans KR"')}catch(e){}
+  const F='"Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif';
+  const W=1080,P=44,G=22,k=current.length;
+  const cols=k<=3?k:(k===4?2:3), rows=Math.ceil(k/cols);
+  const cw=(W-2*P-(cols-1)*G)/cols, nameSize=cw<340?40:48, rowH=nameSize+36, headH=92;
+  const rowMax=Array.from({length:rows},(_,r)=>Math.max(...current.slice(r*cols,r*cols+cols).map(t=>t.length)));
+  const heroH=210, foot=70;
+  let H=heroH+P*.6+foot; rowMax.forEach(m=>H+=headH+m*rowH+30+G);
+  const cv=document.createElement('canvas');cv.width=W;cv.height=Math.ceil(H);const x=cv.getContext('2d');
+  x.fillStyle='#eef2ee';x.fillRect(0,0,W,H);
+  x.fillStyle='#0f3d28';x.fillRect(0,0,W,heroH);
+  x.fillStyle='#fff';x.textBaseline='alphabetic';
+  x.font=`900 68px ${F}`;x.fillText('풋살 팀 배정',P,98);
+  x.globalAlpha=.8;x.font=`500 34px ${F}`;
+  const total=current.reduce((a,t)=>a+t.length,0);
+  x.fillText(`${dateStr()}  ·  ${total}명  ·  ${k}팀`,P,158);x.globalAlpha=1;
+  let y=heroH+P*.6;
+  for(let r=0;r<rows;r++){
+    const h=headH+rowMax[r]*rowH+30;
+    for(let c=0;c<cols;c++){
+      const i=r*cols+c; if(i>=k)break; const t=current[i], s=TEAMS[i], bx=P+c*(cw+G);
+      x.fillStyle='#ffffff';rr(x,bx,y,cw,h,26);x.fill();
+      x.save();rr(x,bx,y,cw,h,26);x.clip();x.fillStyle=s.c;x.fillRect(bx,y,cw,headH);x.restore();
+      x.fillStyle=s.t;x.font=`900 46px ${F}`;x.textAlign='left';x.fillText(`${s.n}팀`,bx+26,y+60);
+      x.font=`500 30px ${F}`;x.textAlign='right';x.fillText(`${t.length}명`,bx+cw-26,y+58);x.textAlign='left';
+      x.fillStyle='#14211a';x.font=`700 ${nameSize}px ${F}`;
+      t.forEach((n,j)=>{
+        const ty=y+headH+22+j*rowH;
+        if(j>0){x.fillStyle='#e3ebe5';x.fillRect(bx+26,ty,cw-52,2);x.fillStyle='#14211a'}
+        x.fillText(n,bx+26,ty+rowH-18);
+      });
+    }
+    y+=h+G;
+  }
+  x.fillStyle='#667a6e';x.font=`500 26px ${F}`;x.textAlign='center';
+  x.fillText('인원이 많은 팀은 서로 교체하며 뛰어요',W/2,H-30);
+  return await new Promise(res=>cv.toBlob(res,'image/png'));
+}
+async function shot(){
+  if(!current)return;
+  $('shot').textContent='이미지 만드는 중…';
+  try{
+    imgBlob=await makeImage();
+    if(imgUrl)URL.revokeObjectURL(imgUrl);
+    imgUrl=URL.createObjectURL(imgBlob);
+    $('shotImg').src=imgUrl;$('modal').classList.add('show');
+  }finally{$('shot').textContent='사진으로 저장'}
+}
+function fileName(){const d=new Date();return `팀배정_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.png`}
+$('shareBtn').onclick=async()=>{
+  const f=new File([imgBlob],fileName(),{type:'image/png'});
+  if(navigator.canShare&&navigator.canShare({files:[f]})){
+    try{await navigator.share({files:[f]});return}catch(e){if(e.name==='AbortError')return}
+  }
+  $('dlBtn').click();
+};
+$('dlBtn').onclick=()=>{const a=document.createElement('a');a.href=imgUrl;a.download=fileName();document.body.appendChild(a);a.click();a.remove()};
+$('closeBtn').onclick=()=>$('modal').classList.remove('show');
+$('modal').addEventListener('click',e=>{if(e.target.id==='modal')$('modal').classList.remove('show')});
 
 /* ---------- 이벤트 ---------- */
 $('members').addEventListener('click',e=>{
-  const c=e.target.closest('.chip'); if(!c)return;
-  const n=members[+c.dataset.i].name;
-  present.has(n)?present.delete(n):present.add(n);
-  render();
+  const c=e.target.closest('.chip');if(!c)return;
+  const n=c.dataset.n;present.has(n)?present.delete(n):present.add(n);render();
 });
-$('allOn').onclick=()=>{members.forEach(m=>present.add(m.name));render()};
+$('allOn').onclick=()=>{allNames().forEach(n=>present.add(n));render()};
 $('allOff').onclick=()=>{present.clear();render()};
 $('editBtn').onclick=()=>{editing=!editing;render()};
 $('editList').addEventListener('change',e=>{
-  const i=e.target.dataset.sc; if(i===undefined)return;
-  members[i].score=Math.max(0,Math.min(100,+e.target.value||DEFAULT_SCORE)); e.target.value=members[i].score; save();
+  const n=e.target.dataset.sc;if(n===undefined)return;
+  const v=Math.max(0,Math.min(100,+e.target.value||DEFAULT_SCORE));e.target.value=v;
+  const g=local.guests.find(g=>g.name===n);g?g.score=v:local.over[n]=v;saveLocal();
 });
 $('editList').addEventListener('click',e=>{
-  const b=e.target.closest('[data-del]'); if(!b)return;
-  if(b.dataset.arm!=='1'){b.dataset.arm='1';b.textContent='삭제?';setTimeout(()=>{b.dataset.arm='';b.textContent='✕'},2500);return}
-  const i=+b.dataset.del;present.delete(members[i].name);members.splice(i,1);save();render();
+  const n=e.target.dataset.del;if(n===undefined)return;
+  local.guests=local.guests.filter(g=>g.name!==n);present.delete(n);saveLocal();render();
 });
-$('add').onclick=()=>{
-  const name=$('nm').value.trim(); if(!name||members.some(m=>m.name===name))return;
-  members.push({name,score:Math.max(0,Math.min(100,+$('sc').value||DEFAULT_SCORE))});
-  $('nm').value='';save();render();$('nm').focus();
+$('gadd').onclick=()=>{
+  const name=$('gn').value.trim();if(!name||allNames().includes(name))return;
+  local.guests.push({name,score:Math.max(0,Math.min(100,+$('gs').value||DEFAULT_SCORE))});
+  present.add(name);$('gn').value='';saveLocal();render();
 };
-$('nm').addEventListener('keydown',e=>{if(e.key==='Enter')$('add').click()});
-$('reset').onclick=()=>{const b=$('reset');
-  if(b.dataset.arm!=='1'){b.dataset.arm='1';b.textContent='한 번 더 누르면 전체 70으로 초기화';setTimeout(()=>{b.dataset.arm='';b.textContent='전체 점수 70으로 초기화'},3000);return}
-  b.dataset.arm='';b.textContent='전체 점수 70으로 초기화';members.forEach(m=>m.score=DEFAULT_SCORE);save();render()};
-$('teamsSel').onchange=()=>{$('teamsSel').dataset.manual='1';updateInfo()};
+$('teamsSel').onchange=()=>{$('teamsSel').dataset.manual='1';updateBar()};
 $('go').onclick=go;
-$('copy').onclick=async()=>{try{await navigator.clipboard.writeText(lastText);$('copy').textContent='복사됨 ✓'}catch(e){$('fallback').style.display='block';$('fallback').value=lastText;$('fallback').select()}setTimeout(()=>$('copy').textContent='결과 복사 (카톡용)',1500)};
-render();
+$('shot').onclick=shot;
+$('copy').onclick=async()=>{
+  if(!current)return;
+  const t=current.map((m,i)=>`[${TEAMS[i].n}팀] ${m.join(', ')}`).join('\n');
+  try{await navigator.clipboard.writeText(t);$('copy').textContent='복사됨'}catch(e){$('copy').textContent='복사 실패'}
+  setTimeout(()=>$('copy').textContent='텍스트 복사',1500);
+};
+$('unlock').onclick=async()=>{
+  $('lockMsg').textContent='확인 중…';
+  if(await tryUnlock($('pw').value,true)){$('pw').value='';render()}else $('lockMsg').textContent='비밀번호가 맞지 않습니다.';
+};
+$('pw').addEventListener('keydown',e=>{if(e.key==='Enter')$('unlock').click()});
+
+(async()=>{
+  if(window.SCORES_ENC){
+    let saved='';try{saved=localStorage.getItem(PWKEY)||''}catch(e){}
+    if(saved&&!(await tryUnlock(saved,false)))try{localStorage.removeItem(PWKEY)}catch(e){}
+  }
+  render();
+})();
 </script>
 </body>
 </html>
